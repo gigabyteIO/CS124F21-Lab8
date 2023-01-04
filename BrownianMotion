@@ -1,0 +1,164 @@
+import javafx.application.Application;
+import javafx.application.Platform;
+import javafx.scene.layout.BorderPane;
+import javafx.scene.Scene;
+import javafx.stage.Stage;
+import javafx.scene.canvas.Canvas;
+import javafx.scene.canvas.GraphicsContext;
+import javafx.scene.paint.Color;
+
+/**
+ * This program shows a simple animation when run, using brownian motion.
+ */
+public class BrownianMotion extends Application {
+
+	//private double x;  // x-coordinate of the center of a moving square
+	//private double y;  // y-coordinate of the center of a moving square
+
+	private ShapeInfo[][] shapes;
+
+	/**
+	 * Draws one frame of the animation.  It is responsible for redrawing the
+	 * entire drawing area. The parameter g is used for drawing.
+	 */
+	private void drawFrame(GraphicsContext g) {
+
+		g.setFill(Color.WHITE);
+		g.fillRect(0, 0, 600, 600); // First, fill the entire image with a background color.
+		
+		double boxWidth = g.getCanvas().getWidth() / 8;
+		double boxHeight = g.getCanvas().getHeight() / 8;
+		// draw boxes
+		for(int i = 0; i < 8; i++) {
+			for(int j = 0; j < 8; j++) {
+				g.strokeLine(i * boxWidth, 0, i * boxWidth, g.getCanvas().getHeight());
+				g.strokeLine(0, j * boxHeight, g.getCanvas().getWidth(), j * boxHeight);		
+			}
+		}
+
+		double x, y;
+		double size;
+		Color color;
+		ShapeInfo shape;
+
+		for(int i = 0; i < shapes.length; i++) {
+			for(int j = 0; j < shapes.length; j++) {
+				shape = shapes[i][j];
+				x = shapes[i][j].x;
+				y = shapes[i][j].y;
+				size = shapes[i][j].size;
+				color = shapes[i][j].color;
+
+				g.setFill(color);
+				g.fillRect( x-10, y-10, size, size ); // Draw a 20-by-20 square with center at (x,y).
+
+				double randX = (4*Math.random() - 2);
+				double randY = (4*Math.random() - 2);
+				
+				double tempX = x + randX;
+				double tempY = y + randY;
+				
+				if( tempX <= shape.left || tempX >= shape.right || tempY <= shape.top || tempY >= shape.bottom) {
+					// do nothing
+					//shapes[i][j].x = x;
+					//shapes[i][j].y = y;
+				}
+				else {
+					shapes[i][j].x = x + randX; // Update x random amount in the range -2 to 2.
+					shapes[i][j].y = y + randY; // Update y similarly.
+				}
+			}
+		}
+
+	} // end DrawFrame
+
+	/**
+	 * This method is called just once, when the program just starts, before anything
+	 * is drawn.  Its purpose is to initialize global variables and possibly to initialize 
+	 * the state of the graphics context.
+	 */
+	private void initialize(GraphicsContext g) {
+		//x = 300;  // Set the initial values of x and y to put the point at the center.
+		//y = 300;
+		
+		int numberOfShapes = 8;
+		double canvasWidth = g.getCanvas().getWidth();
+		double canvasHeight = g.getCanvas().getHeight();
+		
+		double boxWidth = canvasWidth / numberOfShapes;
+		double boxHeight = canvasHeight / numberOfShapes;
+		
+		
+
+		shapes = new ShapeInfo[numberOfShapes][numberOfShapes];
+		ShapeInfo shape;
+
+		for(int i = 0; i < numberOfShapes; i++) {
+			for(int j = 0; j < numberOfShapes; j++) {
+				
+				shape = new ShapeInfo();
+				shape.size = 20;
+				shape.color = Color.color(Math.random(), Math.random(), Math.random(), Math.random());
+				
+				shape.x = (j * (boxWidth)) + (boxWidth / 2);
+				shape.left = (j * boxWidth) + 10;
+				shape.right = (j * boxWidth) + (boxWidth) - 10;
+				//System.out.println("\nx:" + shape.x);
+				//System.out.println("left:" + shape.left);
+				//System.out.println("right:" + shape.right);
+				
+				shape.y = (i * (boxHeight)) + (boxHeight / 2);
+				shape.top = (i * boxHeight) + 10;
+				shape.bottom = (i * boxHeight) + (boxHeight) - 10;
+				//System.out.println("y:" + shape.y);
+				//System.out.println("top:" + shape.top);
+				//System.out.println("bottom:" + shape.bottom);
+				
+				shapes[i][j] = shape;
+
+			}
+		}
+	} // end Initialize()
+
+	//------ Implementation details: NO NEED TO UNDERSTAND THIS ------
+
+	public void start(Stage stage) {
+		int width = 600;   // The width of the image.
+		int height = 600;  // The height of the image.
+		Canvas canvas = new Canvas(width,height);
+		GraphicsContext g = canvas.getGraphicsContext2D();
+		BorderPane root = new BorderPane(canvas);
+		root.setStyle("-fx-border-width: 1px; -fx-border-color: #444");
+		Scene scene = new Scene(root);
+		stage.setScene(scene);
+		stage.setTitle("Brownian Motion"); // this string appears in the window titlebar.
+		stage.show();
+		stage.setResizable(false);
+		// The following is not the best way to animate a JavaFX program.
+		Runnable animationLoop = () -> {
+			try {
+				Thread.sleep(500);  // wait 1/2 second before starting the animation
+			}
+			catch (InterruptedException e) {
+			}
+			while (true) {
+				Platform.runLater( () -> drawFrame(g) ); // Call doFrame(g) in the GUI thread.
+				try {
+					Thread.sleep(16);  // Pause about 1/60 second.
+				}
+				catch (InterruptedException e) {
+				}
+			}
+		};
+		Thread animator = new Thread(animationLoop);
+		animator.setDaemon(true); // So the animation thread doesn't stop JVM from exiting.
+		initialize(g);
+		drawFrame(g); // Call drawFrame(g) the first time -- the picture shown for the first 1/2 second.
+		animator.start();
+	} 
+
+	public static void main(String[] args) {
+		launch();
+	}
+
+} // end BrownianMotion
